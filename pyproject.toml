@@ -1,0 +1,50 @@
+[project]
+name = "clinical-rag"
+version = "0.1.0"
+description = "Clinical Q&A system with citation-grounded RAG over synthetic FHIR data"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    # API
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    # Config / models
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "python-dotenv>=1.0",
+    # Datastore: Postgres + pgvector
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",
+    "pgvector>=0.3",
+    # Provider-agnostic LLM clients (one OpenAI-compatible, one Anthropic-compatible)
+    "openai>=1.54",
+    "anthropic>=0.39",
+    # Local, offline embeddings (default). Switchable to a remote provider via env.
+    "fastembed>=0.4",
+    # Orchestration helpers
+    "langchain-core>=0.3",
+    "langchain-text-splitters>=0.3",
+    "httpx>=0.27",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

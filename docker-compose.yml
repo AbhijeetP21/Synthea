@@ -1,0 +1,38 @@
+# Postgres + pgvector for the clinical RAG store.
+#
+# MVP usage: `docker compose up -d db` and run the app/ingestion on the host
+# (mise + uv) for a fast inner loop. The `api` service is provided so the whole
+# system can be brought up in containers for a demo (`docker compose --profile app up`).
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: clinical
+      POSTGRES_PASSWORD: clinical
+      POSTGRES_DB: clinical
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clinical -d clinical"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    profiles: ["app"]
+    build: .
+    env_file: .env
+    environment:
+      # Override the host-oriented default so the container reaches the db service.
+      DATABASE_URL: postgresql+psycopg://clinical:clinical@db:5432/clinical
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

@@ -1,0 +1,29 @@
+# Project toolchain. Pin Python to 3.12: the Presidio / spaCy / LangChain
+# stack does not yet ship wheels for 3.14 (the global mise default).
+[tools]
+python = "3.12"
+uv = "latest"
+
+[env]
+# Load the project .env for any `mise run` / `mise exec` invocation.
+_.file = ".env"
+
+[tasks.install]
+description = "Create venv and install dependencies with uv"
+run = "uv sync"
+
+[tasks.api]
+description = "Run the FastAPI service"
+run = "uv run uvicorn app.main:app --reload --port 8000"
+
+[tasks.ingest]
+description = "Ingest a Synthea FHIR bundle (pass the path as an argument)"
+run = "uv run python -m scripts.ingest"
+
+[tasks.test]
+description = "Run the test suite"
+run = "uv run pytest -q"
+
+[tasks.synthea]
+description = "Generate a Synthea cohort via Docker"
+run = "pwsh -File tools/synthea/generate.ps1"
