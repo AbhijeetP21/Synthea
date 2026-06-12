@@ -34,6 +34,16 @@ class Settings(BaseSettings):
     embeddings_base_url: str = ""
     embeddings_api_key: str = ""
 
+    # --- PHI detection & redaction (Phase 3) ---
+    # Detect/redact identifiers before any text is embedded, stored, or sent to
+    # the model. Detection always reports the full set; redaction covers direct
+    # identifiers. Dates are reported but kept by default (clinical content in
+    # this synthetic demonstrator) — flip phi_redact_dates to also redact them.
+    phi_redaction: bool = True
+    phi_spacy_model: str = "en_core_web_lg"
+    phi_score_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
+    phi_redact_dates: bool = False
+
     # --- Datastore ---
     database_url: str = "postgresql+psycopg://clinical:clinical@localhost:5432/clinical"
 

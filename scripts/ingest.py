@@ -28,6 +28,14 @@ def main() -> int:
     print(f"  ingested   : {summary['ingested']} chunks")
     for rtype, n in sorted(summary.get("by_type", {}).items()):
         print(f"    - {rtype}: {n}")
+
+    phi = summary.get("phi", {})
+    detected, redacted = phi.get("detected", {}), phi.get("redacted", {})
+    if detected:
+        print("  PHI detected (HIPAA Safe Harbor identifiers):")
+        for ent, n in sorted(detected.items(), key=lambda kv: (-kv[1], kv[0])):
+            mark = f"redacted x{redacted[ent]}" if ent in redacted else "flagged, kept"
+            print(f"    - {ent}: {n} ({mark})")
     return 0
 
 

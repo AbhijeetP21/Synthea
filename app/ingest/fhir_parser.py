@@ -236,6 +236,45 @@ def parse_bundle(bundle: dict) -> tuple[str, list[ParsedResource]]:
     return patient_id, parsed
 
 
+def collect_phi_hints(bundle: dict) -> dict[str, list[str]]:
+    """Pull known identifier strings from the structured Patient field(s) so the
+    PHI stage can deny-list them. NER misses Synthea's digit-suffixed names
+    ("Vanna750"); the structured record knows them exactly, so we hand them over
+    rather than hoping the model infers them. Keyed by Presidio entity type."""
+    persons: list[str] = []
+    locations: list[str] = []
+    for e in bundle.get("entry", []):
+        r = e.get("resource", {})
+        if r.get("resourceType") != "Patient":
+            continue
+        for n in r.get("name", []):
+            given = n.get("given", []) or []
+            family = n.get("family", "")
+            persons.extend(given)
+            if family:
+                persons.append(family)
+            full = " ".join([*given, family]).strip()
+            if full:
+                persons.append(full)
+            persons.extend(n.get("prefix", []) or [])
+            persons.extend(n.get("suffix", []) or [])
+        for a in r.get("address", []):
+            locations.extend(a.get("line", []) or [])
+            for key in ("city", "district", "state", "postalCode", "country"):
+                if a.get(key):
+                    locations.append(str(a[key]))
+
+    def _dedupe(items: list[str]) -> list[str]:
+        return sorted({s.strip() for s in items if s and s.strip()})
+
+    hints: dict[str, list[str]] = {}
+    if persons := _dedupe(persons):
+        hints["PERSON"] = persons
+    if locations := _dedupe(locations):
+        hints["LOCATION"] = locations
+    return hints
+
+
 def _extract_date(rtype: str, r: dict) -> str | None:
     keys = {
         "Condition": ("onsetDateTime", "recordedDate"),

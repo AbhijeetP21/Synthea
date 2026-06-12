@@ -15,7 +15,7 @@ CI-gated evaluation harness.
 
 ## Status
 
-Built in phases (see the build brief). **Phases 1–2 are implemented:**
+Built in phases (see the build brief). **Phases 1–3 are implemented:**
 
 - ✅ **Phase 1 (MVP):** ingest one Synthea patient → pgvector; patient-scoped
   semantic retrieval; grounded Q&A with **per-sentence inline citations**
@@ -23,7 +23,8 @@ Built in phases (see the build brief). **Phases 1–2 are implemented:**
 - ✅ **Phase 2 (Abstention):** refuses correctly when evidence is insufficient —
   including off-topic / out-of-record questions — via a retrieval **relevance
   gate** plus the grounding gate (see below)
-- 🔜 Phase 3: Presidio PHI detection & redaction (seam already in place — `app/ingest/phi.py`)
+- ✅ **Phase 3 (PHI):** Presidio-based detection & redaction of HIPAA Safe Harbor
+  identifiers, before any text is embedded, stored, or sent to the model (see below)
 - 🔜 Phase 4: eval harness (groundedness, hallucination rate, retrieval precision/recall, abstention correctness) + CI gating
 - 🔜 Phase 5: Streamlit dashboard with inline citation rendering
 
@@ -86,7 +87,7 @@ at SynapticaAI later is a base-URL + key change in `.env` — no code change.**
 ### 1. Install the toolchain and dependencies
 ```powershell
 mise install        # Python 3.12 + uv, per mise.toml
-mise run install    # uv sync
+mise run install    # uv sync — also pulls the spaCy en_core_web_lg model (~400MB) for PHI
 ```
 
 ### 2. Configure environment
@@ -170,6 +171,40 @@ The model is also instructed to abstain on insufficient evidence and to answer
 only the supported parts of a multi-part question. Net effect: the system says
 *"No matching information was found in this patient's record"* instead of
 guessing — the strongest safety signal the brief asks for.
+
+---
+
+## PHI detection & redaction (Phase 3)
+
+Before any text is embedded, stored, or sent to the model, it passes through the
+PHI stage (`app/ingest/phi.py`), which uses **Microsoft Presidio** (spaCy NER +
+rule-based recognizers) to find HIPAA Safe Harbor identifiers. Two deliberate
+design choices:
+
+- **Structured hints, not NER guesswork.** FHIR is structured, so at ingest time
+  we already know the patient's name and address. Synthea's names carry numeric
+  suffixes (*"Vanna750 Rosenbaum794"*) that defeat NER outright — so
+  `collect_phi_hints()` pulls the known identifier strings from the Patient
+  resource and seeds them as a Presidio deny-list. De-identification therefore
+  does not depend on the model *inferring* that a token is a name. Custom
+  recognizers cover the gaps in the base library (dashed SSNs, medical record
+  numbers).
+- **Detect-all, redact-curated.** Every identifier category found is *reported*
+  (the governance signal — `mise run ingest` prints the tally); direct
+  identifiers (names, geography, contacts, SSN/MRN, account/license numbers) are
+  *redacted* to `<PERSON>`, `<LOCATION>`, etc. **Dates are flagged but kept by
+  default** (`PHI_REDACT_DATES=false`): onset and authoring dates are clinical
+  content that powers the grounded answers, and the data is synthetic. This is
+  the Safe-Harbor trade-off made explicit rather than blindly nuking dates.
+
+After redaction the stored Patient record reads
+`Patient <PERSON>. Gender: female. Date of birth: 1966-10-28. Address: <LOCATION>, <LOCATION>.`
+— the name and city are gone everywhere, while gender, dates, and all clinical
+codes survive so retrieval and citations are unaffected. Disable the stage with
+`PHI_REDACTION=false`.
+
+> Synthetic data only. This stage demonstrates data governance; it is **not** a
+> license to process real PHI.
 
 ---
 
