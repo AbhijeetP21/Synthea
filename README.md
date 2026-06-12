@@ -11,6 +11,8 @@ CI-gated evaluation harness.
 > use**, and **does not provide medical advice or treatment recommendations**.
 > It is strictly a retrieval-and-grounding demonstrator.
 
+![Grounded answer in the dashboard: every sentence carries inline citations that resolve to the exact FHIR source.](assets/dashboard-grounded.png)
+
 ---
 
 ## Status
@@ -265,6 +267,11 @@ and presented it as cited. A weaker, same-family judge waved this through; the
 stronger independent judge caught the unstated clinical assumption. That is
 exactly the failure mode an eval harness exists to surface.
 
+Groundedness is therefore sensitive to judge capability: a smaller judge
+(`gpt-5.4-mini`) scored this same answer a clean 1.00, while `gpt-5.5` flagged
+it - which is precisely why the judge runs on a deliberately strong model that
+is independent of the generator, rather than the generator grading itself.
+
 > Honest caveats: the gold set is small (14 items). The grounding gate drops
 > *uncited* sentences before the judge ever runs, so the judge's job is the
 > subtler one above - catching a *cited* sentence whose citation doesn't actually
@@ -288,6 +295,14 @@ is the whole point of the system:
   behavior reads as a feature.
 - Redacted tokens (`<PERSON>`, `<LOCATION>`) appear in the source text, so the
   PHI stage is visible too.
+
+| Grounded answer | Abstention |
+|---|---|
+| ![A grounded answer with inline citations and resolved source cards](assets/dashboard-grounded.png) | ![The system abstaining when the record has no answer](assets/dashboard-abstention.png) |
+
+*Left: a grounded answer - inline `[n]` citations resolve to FHIR source cards
+with codes and dates. Right: the system declining to answer "what is the blood
+type?" because no citable evidence exists, rather than guessing.*
 
 ```powershell
 mise run api          # terminal 1
