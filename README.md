@@ -11,7 +11,7 @@ CI-gated evaluation harness.
 > use**, and **does not provide medical advice or treatment recommendations**.
 > It is strictly a retrieval-and-grounding demonstrator.
 
-![Grounded answer in the dashboard: every sentence carries inline citations that resolve to the exact FHIR source.](assets/dashboard-grounded.png)
+![The dashboard answering a clinical question end to end - the answer renders with inline citations that resolve to the FHIR source cards shown below it.](assets/dashboard-demo.gif)
 
 ---
 
