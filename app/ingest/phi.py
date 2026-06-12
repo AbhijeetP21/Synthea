@@ -1,4 +1,4 @@
-"""PHI detection & redaction — the data-governance stage (Phase 3).
+"""PHI detection & redaction — the data-governance stage (Stage 3).
 
 Every piece of text is run through this before it is embedded, persisted, or
 sent to the model, so no un-redacted identifier reaches the vector store or the

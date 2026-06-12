@@ -1,4 +1,4 @@
-"""Dashboard rendering helpers (Phase 5) — pure, no Streamlit."""
+"""Dashboard rendering helpers (Stage 5) — pure, no Streamlit."""
 
 from app.schemas import AnswerSentence, AskResponse, Coding, Source
 from app.web.render import (

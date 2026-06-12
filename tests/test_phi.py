@@ -1,4 +1,4 @@
-"""PHI stage (Phase 3). The Presidio test loads the spaCy model once (module
+"""PHI stage (Stage 3). The Presidio test loads the spaCy model once (module
 scope) — it is the one slow test, kept isolated so the rest of the suite stays
 fast. Verifies identifiers are removed while clinical content survives."""
 

@@ -1,4 +1,4 @@
-"""Streamlit dashboard (Phase 5) — inline-cited clinical Q&A over the FastAPI service.
+"""Streamlit dashboard (Stage 5) — inline-cited clinical Q&A over the FastAPI service.
 
 Run the API first, then the dashboard:
     mise run api

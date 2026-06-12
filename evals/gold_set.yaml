@@ -1,4 +1,4 @@
-# Hand-labeled gold set for the Phase 4 eval harness.
+# Hand-labeled gold set for the Stage 4 eval harness.
 #
 # Labeled against the ingested Synthea patient (Vanna750 Rosenbaum794 ->
 # redacted). Each item encodes the *desired* behavior so the harness can score

@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     chat_max_tokens: int = 2000
     chat_temperature: float = 0.0
 
-    # --- Judge model (eval harness, Phase 4) ---
+    # --- Judge model (eval harness, Stage 4) ---
     # The LLM-as-judge runs through the same provider seam, but configured
     # separately so it can be a *different* model than the one under test
     # (judging a model with itself is a known eval weakness). Defaults to MiniMax;
@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     embeddings_base_url: str = ""
     embeddings_api_key: str = ""
 
-    # --- PHI detection & redaction (Phase 3) ---
+    # --- PHI detection & redaction (Stage 3) ---
     # Detect/redact identifiers before any text is embedded, stored, or sent to
     # the model. Detection always reports the full set; redaction covers direct
     # identifiers. Dates are reported but kept by default (clinical content in
@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     # farther than this are treated as non-evidence so off-topic / out-of-record
     # questions retrieve nothing and the system abstains. Calibrated for
     # bge-small-en-v1.5 (relevant ~0.24-0.34, off-topic ~0.42+); the eval harness
-    # (Phase 4) can tune it. Set high (e.g. 2.0) to disable the gate.
+    # (Stage 4) can tune it. Set high (e.g. 2.0) to disable the gate.
     retrieval_max_distance: float = Field(default=0.40, ge=0.0, le=2.0)
 
 

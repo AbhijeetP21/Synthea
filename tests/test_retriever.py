@@ -1,4 +1,4 @@
-"""The relevance gate is the Phase 2 abstention mechanism: chunks beyond the
+"""The relevance gate is the Stage 2 abstention mechanism: chunks beyond the
 distance ceiling are dropped, so off-topic questions retrieve nothing and the
 Q&A service abstains. Tests mock the embedder and DB to stay offline."""
 
