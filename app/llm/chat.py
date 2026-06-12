@@ -51,7 +51,15 @@ class AnthropicChatClient(ChatClient):
 
 
 class OpenAIChatClient(ChatClient):
-    """OpenAI-compatible backend (OpenAI, SynapticaAI, MiniMax OpenAI-mode)."""
+    """OpenAI-compatible backend (OpenAI, SynapticaAI, MiniMax OpenAI-mode).
+
+    Newer OpenAI models (gpt-5.x, o-series) renamed ``max_tokens`` to
+    ``max_completion_tokens`` and only accept the default ``temperature``.
+    Older models and most third-party OpenAI-compatible endpoints still want
+    the original names, so we send the classic params and adapt on the
+    server's "unsupported parameter" reply rather than hard-coding a per-model
+    table. Provider quirks stay here; the rest of the codebase is unaffected.
+    """
 
     def __init__(self, settings: Settings) -> None:
         from openai import OpenAI
@@ -63,16 +71,52 @@ class OpenAIChatClient(ChatClient):
         )
 
     def complete(self, *, system: str, user: str) -> str:
-        resp = self._client.chat.completions.create(
-            model=self._settings.chat_model,
-            max_tokens=self._settings.chat_max_tokens,
-            temperature=self._settings.chat_temperature,
-            messages=[
+        from openai import BadRequestError
+
+        kwargs: dict = {
+            "model": self._settings.chat_model,
+            "max_tokens": self._settings.chat_max_tokens,
+            "temperature": self._settings.chat_temperature,
+            "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-        )
-        return (resp.choices[0].message.content or "").strip()
+        }
+        # At most two adaptations are possible (max_tokens, temperature).
+        for _ in range(3):
+            try:
+                resp = self._client.chat.completions.create(**kwargs)
+                return (resp.choices[0].message.content or "").strip()
+            except BadRequestError as exc:
+                if not _adapt_kwargs(kwargs, exc):
+                    raise
+        raise RuntimeError("OpenAI request kept failing after parameter adaptation")
+
+
+def _faulty_param(exc) -> str | None:
+    """The parameter name the server flagged as unsupported, if any."""
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        err = body.get("error", body)
+        if isinstance(err, dict):
+            return err.get("param")
+    return None
+
+
+def _adapt_kwargs(kwargs: dict, exc) -> bool:
+    """Rewrite request kwargs in place to satisfy newer OpenAI models.
+
+    Returns True if something was changed and the call is worth retrying.
+    """
+    param = _faulty_param(exc)
+    if param == "max_tokens" and "max_tokens" in kwargs:
+        kwargs["max_completion_tokens"] = kwargs.pop("max_tokens")
+        return True
+    if param == "temperature" and "temperature" in kwargs:
+        # gpt-5.x / o-series only accept the default temperature.
+        kwargs.pop("temperature")
+        return True
+    return False
 
 
 def _build(settings: Settings) -> ChatClient:

@@ -71,6 +71,11 @@ environment variables. **No provider is hard-coded anywhere else.**
 - **Chat** (`CHAT_PROVIDER`):
   - `anthropic` → Anthropic SDK → **MiniMax-M3** at `https://api.minimax.io/anthropic` (today's default)
   - `openai` → OpenAI SDK → **OpenAI / SynapticaAI / MiniMax OpenAI-mode**
+- **Judge** (`JUDGE_PROVIDER`): the eval LLM-as-judge, on its own seam so it can
+  be a *different vendor and model family* than the generator - here OpenAI
+  `gpt-5.5` grading MiniMax, so the system is not marking its own work. The
+  OpenAI adapter adapts to newer-model parameter rules (`max_completion_tokens`,
+  fixed temperature) automatically, so the swap stays config-only.
 - **Embeddings** (`EMBEDDINGS_PROVIDER`):
   - `local` → **fastembed** (`bge-small-en-v1.5`, 384-dim) - offline, no key, deterministic for CI (default)
   - `openai` → any OpenAI-compatible `/embeddings` endpoint (OpenAI, MiniMax, SynapticaAI)
@@ -239,7 +244,8 @@ mise run eval                              # full run if CHAT_API_KEY is set
 uv run python -m evals.run --no-llm        # deterministic gate only (what CI runs)
 ```
 
-Latest local run (MiniMax-M3 generator + judge, 14 items):
+Latest local run - **MiniMax-M3 generator graded by an independent
+`gpt-5.5` judge** (different vendor and model family), 14 items:
 
 | Metric | Score |
 |---|---|
@@ -247,17 +253,25 @@ Latest local run (MiniMax-M3 generator + judge, 14 items):
 | Retrieval precision | 0.23 *(small relevant sets vs. top-8 - recall is the safety-relevant number)* |
 | Abstention reachability (deterministic) | **1.00** |
 | Abstention correctness (LLM path) | **1.00** *(abstains on blood type, cancer hx, procedures, vaccinations, redacted contact info, off-topic)* |
-| Groundedness | **1.00** |
-| Hallucination rate | **0.00** |
+| Groundedness | **0.92** |
+| Hallucination rate | **0.08** |
 
-> Honest caveats: the gold set is small (14 items), and the judge currently
-> shares MiniMax's model family with the generator (`JUDGE_*` is a separate,
-> swappable seam precisely so a different judge can be dropped in). The grounding
-> gate drops uncited sentences *before* the judge sees them, so a near-zero
-> hallucination rate is expected by construction - the judge is a second line of
-> defense, not the only one. Two distinct abstention mechanisms are measured
-> separately: the deterministic relevance gate (off-topic) and the grounded LLM
-> layer (clinically-adjacent but out-of-record).
+The non-perfect groundedness is the harness working as intended. The
+independent judge flagged one sentence on the BMI question: the model correctly
+read the cited BMI *value* (28.32 kg/m2) from the Observation, but then asserted
+it was "below the 30 kg/m2 obesity threshold" - and that 30 cutoff appears
+*nowhere in the cited resource*. The model imported a fact from its own training
+and presented it as cited. A weaker, same-family judge waved this through; the
+stronger independent judge caught the unstated clinical assumption. That is
+exactly the failure mode an eval harness exists to surface.
+
+> Honest caveats: the gold set is small (14 items). The grounding gate drops
+> *uncited* sentences before the judge ever runs, so the judge's job is the
+> subtler one above - catching a *cited* sentence whose citation doesn't actually
+> support it. The judge runs on its own swappable `JUDGE_*` seam (here OpenAI
+> `gpt-5.5`, independent of the MiniMax generator). Two distinct abstention
+> mechanisms are measured separately: the deterministic relevance gate
+> (off-topic) and the grounded LLM layer (clinically-adjacent but out-of-record).
 
 ---
 
