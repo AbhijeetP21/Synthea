@@ -15,7 +15,7 @@ CI-gated evaluation harness.
 
 ## Status
 
-Built in phases (see the build brief). **Phases 1–4 are implemented:**
+Built in phases (see the build brief). **All five phases are implemented:**
 
 - ✅ **Phase 1 (MVP):** ingest one Synthea patient → pgvector; patient-scoped
   semantic retrieval; grounded Q&A with **per-sentence inline citations**
@@ -28,7 +28,8 @@ Built in phases (see the build brief). **Phases 1–4 are implemented:**
 - ✅ **Phase 4 (Eval harness + CI gate):** labeled gold set scored on groundedness,
   hallucination rate, retrieval precision/recall, and abstention correctness;
   deterministic metrics gate every PR in CI (see below)
-- 🔜 Phase 5: Streamlit dashboard with inline citation rendering
+- ✅ **Phase 5 (Dashboard):** Streamlit UI over the API that renders every answer
+  with **inline, clickable citations** to the FHIR sources (see below)
 
 > *Hybrid (semantic + keyword/BM25) retrieval — §6 of the brief — is built behind
 > the `Retriever` seam as a later increment; semantic-only is the MVP baseline.*
@@ -119,6 +120,11 @@ Ask a question:
 ```powershell
 $body = @{ patient_id = "<id printed by ingest>"; question = "What medications is this patient on, and any flagged allergies?" } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri http://localhost:8000/ask -ContentType application/json -Body $body
+```
+
+### 6. Run the dashboard
+```powershell
+mise run dashboard  # http://localhost:8501  (keep the API from step 5 running)
 ```
 
 ### Run everything in containers (demo)
@@ -255,13 +261,39 @@ Latest local run (MiniMax-M3 generator + judge, 14 items):
 
 ---
 
+## Dashboard (Phase 5)
+
+A Streamlit UI (`streamlit_app.py`) talks to the FastAPI service over HTTP — so
+it shows exactly what any client would get — and renders the traceability that
+is the whole point of the system:
+
+- Each answer sentence carries **superscript `[n]` citations that link down to
+  numbered source cards** (the resolved FHIR resource: its text, clinical codes,
+  and date). Grounding is *visible*, not just claimed.
+- **Abstention is shown as a deliberate notice**, not an error — the safety
+  behavior reads as a feature.
+- Redacted tokens (`<PERSON>`, `<LOCATION>`) appear in the source text, so the
+  PHI stage is visible too.
+
+```powershell
+mise run api          # terminal 1
+mise run dashboard    # terminal 2 -> http://localhost:8501
+```
+
+The pure rendering logic (citation numbering, HTML escaping of redaction tokens)
+lives in `app/web/render.py`, separate from the Streamlit script so it is unit
+tested.
+
+---
+
 ## Testing
 ```powershell
 mise run test
 ```
 Covers FHIR parsing & code-system mapping, the embeddable-text composition, the
 grounding gate (including hallucinated-citation rejection and abstention
-fallback), and tolerant JSON parsing.
+fallback), tolerant JSON parsing, PHI redaction, eval metrics, and the dashboard
+rendering helpers.
 
 ---
 

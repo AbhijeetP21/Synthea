@@ -28,6 +28,10 @@ run = "uv run pytest -q"
 description = "Run the eval harness (deterministic gate + LLM-judge if a key is set)"
 run = "uv run python -m evals.run --out evals/last_run.json"
 
+[tasks.dashboard]
+description = "Run the Streamlit dashboard (start `mise run api` first)"
+run = "uv run streamlit run streamlit_app.py"
+
 [tasks.synthea]
 description = "Generate a Synthea cohort via Docker"
 run = "pwsh -File tools/synthea/generate.ps1"
