@@ -97,7 +97,10 @@ def test_parse_llm_json_handles_fenced_and_prose():
     assert parsed.abstained is False
     assert parsed.sentences[0].citations == ["A/1"]
 
-    prose = 'Here is the answer: {"abstained": true, "abstention_reason": "no", "sentences": []} Thanks!'
+    prose = (
+        'Here is the answer: '
+        '{"abstained": true, "abstention_reason": "no", "sentences": []} Thanks!'
+    )
     parsed2 = _parse_llm_json(prose)
     assert parsed2.abstained is True
 

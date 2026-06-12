@@ -130,7 +130,10 @@ def _render_condition(r: dict) -> tuple[str, str, list[Coding]]:
     status = _concept_text(r.get("clinicalStatus")) if r.get("clinicalStatus") else "unknown"
     onset = _date(r, "onsetDateTime", "recordedDate")
     title = f"Condition: {label}"
-    text = f"Condition (diagnosis): {label}. Clinical status: {status}. Onset: {onset or 'unknown'}."
+    text = (
+        f"Condition (diagnosis): {label}. Clinical status: {status}. "
+        f"Onset: {onset or 'unknown'}."
+    )
     return title, text, codings
 
 

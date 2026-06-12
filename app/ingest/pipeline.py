@@ -20,7 +20,8 @@ def _embeddable_text(r: ParsedResource) -> str:
     parts = [r.text]
     for c in r.codings:
         if c.code:
-            parts.append(f"[{c.system_name or 'code'} {c.code}{' ' + c.display if c.display else ''}]")
+            display = f" {c.display}" if c.display else ""
+            parts.append(f"[{c.system_name or 'code'} {c.code}{display}]")
     return " ".join(parts)
 
 

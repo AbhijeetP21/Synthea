@@ -17,8 +17,15 @@ from app.schemas import Source
 class Retriever:
     def __init__(self) -> None:
         self._embedder = get_embeddings_client()
-        self._k = get_settings().retrieval_top_k
+        settings = get_settings()
+        self._k = settings.retrieval_top_k
+        self._max_distance = settings.retrieval_max_distance
 
     def retrieve(self, patient_id: str, query: str, k: int | None = None) -> list[Source]:
         query_vec = self._embedder.embed_query(query)
-        return semantic_search(patient_id, query_vec, k or self._k)
+        scored = semantic_search(patient_id, query_vec, k or self._k)
+        # Relevance gate: drop chunks beyond the distance ceiling. If a question
+        # is off-topic or its answer is not in the record, every chunk is too far
+        # and we return nothing — the Q&A service then abstains rather than
+        # answering from irrelevant evidence.
+        return [src for src, dist in scored if dist <= self._max_distance]

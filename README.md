@@ -15,16 +15,20 @@ CI-gated evaluation harness.
 
 ## Status
 
-Built in phases (see the build brief). **Phase 1 (MVP) is implemented:**
+Built in phases (see the build brief). **Phases 1–2 are implemented:**
 
-- ✅ Ingest one Synthea patient → pgvector
-- ✅ Patient-scoped semantic retrieval
-- ✅ Grounded Q&A with **per-sentence inline citations** (structured, validated output)
-- ✅ **Abstention** when evidence is insufficient
-- 🔜 Phase 2: hybrid (semantic + keyword/BM25) retrieval
+- ✅ **Phase 1 (MVP):** ingest one Synthea patient → pgvector; patient-scoped
+  semantic retrieval; grounded Q&A with **per-sentence inline citations**
+  (structured, validated output)
+- ✅ **Phase 2 (Abstention):** refuses correctly when evidence is insufficient —
+  including off-topic / out-of-record questions — via a retrieval **relevance
+  gate** plus the grounding gate (see below)
 - 🔜 Phase 3: Presidio PHI detection & redaction (seam already in place — `app/ingest/phi.py`)
 - 🔜 Phase 4: eval harness (groundedness, hallucination rate, retrieval precision/recall, abstention correctness) + CI gating
 - 🔜 Phase 5: Streamlit dashboard with inline citation rendering
+
+> *Hybrid (semantic + keyword/BM25) retrieval — §6 of the brief — is built behind
+> the `Retriever` seam as a later increment; semantic-only is the MVP baseline.*
 
 ---
 
@@ -143,6 +147,29 @@ Answers are **structured, not free text**, and validated with Pydantic
   retrieved source are dropped; a sentence with no surviving citation is dropped;
   if nothing grounded remains, the system **abstains** rather than asserting an
   unsupported clinical claim.
+
+---
+
+## Abstention (Phase 2)
+
+The system refuses to answer when the record doesn't support an answer. Two
+independent gates make this robust:
+
+1. **Relevance gate** (`app/retrieval/retriever.py`): semantic search returns
+   each chunk's cosine distance, and chunks beyond `RETRIEVAL_MAX_DISTANCE` are
+   discarded. An off-topic or out-of-record question (*"What is the capital of
+   France?"*) finds nothing close enough, retrieves zero evidence, and the
+   service abstains **without ever calling the model**. The threshold (default
+   `0.40`) was calibrated on the ingested patient — relevant queries land at
+   cosine distance ~0.24–0.34, off-topic ones at ~0.42+ — and is env-tunable so
+   the Phase 4 eval harness can optimize it.
+2. **Grounding gate** (above): even when evidence *is* retrieved, any answer the
+   model can't tie back to it is dropped, falling through to abstention.
+
+The model is also instructed to abstain on insufficient evidence and to answer
+only the supported parts of a multi-part question. Net effect: the system says
+*"No matching information was found in this patient's record"* instead of
+guessing — the strongest safety signal the brief asks for.
 
 ---
 

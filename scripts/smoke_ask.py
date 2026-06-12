@@ -1,6 +1,5 @@
 """Live smoke test: exercise the full grounded-Q&A path against the configured chat provider."""
 
-import json
 import sys
 
 from app.qa.service import QAService

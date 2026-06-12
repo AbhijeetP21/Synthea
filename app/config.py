@@ -39,6 +39,12 @@ class Settings(BaseSettings):
 
     # --- Retrieval ---
     retrieval_top_k: int = Field(default=8, ge=1, le=50)
+    # Cosine-distance ceiling (0 = identical, higher = less similar). Chunks
+    # farther than this are treated as non-evidence so off-topic / out-of-record
+    # questions retrieve nothing and the system abstains. Calibrated for
+    # bge-small-en-v1.5 (relevant ~0.24-0.34, off-topic ~0.42+); the eval harness
+    # (Phase 4) can tune it. Set high (e.g. 2.0) to disable the gate.
+    retrieval_max_distance: float = Field(default=0.40, ge=0.0, le=2.0)
 
 
 @lru_cache

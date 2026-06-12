@@ -96,14 +96,22 @@ def list_patients() -> list[str]:
         return sorted(rows)
 
 
-def semantic_search(patient_id: str, query_embedding: list[float], k: int) -> list[Source]:
-    """Top-k chunks for a patient by cosine distance."""
+def semantic_search(
+    patient_id: str, query_embedding: list[float], k: int
+) -> list[tuple[Source, float]]:
+    """Top-k chunks for a patient, each paired with its cosine distance.
+
+    Returning the distance lets the retrieval layer apply a relevance threshold,
+    which is what makes abstention on out-of-record questions possible — without
+    it, the nearest k chunks are returned no matter how far away they are.
+    """
     engine = get_engine()
+    distance = Chunk.embedding.cosine_distance(query_embedding)
     with Session(engine) as session:
         stmt = (
-            select(Chunk)
+            select(Chunk, distance.label("distance"))
             .where(Chunk.patient_id == patient_id)
-            .order_by(Chunk.embedding.cosine_distance(query_embedding))
+            .order_by(distance)
             .limit(k)
         )
-        return [c.to_source() for c in session.execute(stmt).scalars().all()]
+        return [(chunk.to_source(), float(dist)) for chunk, dist in session.execute(stmt)]
