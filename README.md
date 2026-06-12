@@ -326,6 +326,27 @@ rendering helpers.
 
 ---
 
+## Future scope
+
+The system is built behind clean seams (provider, retriever, ingestion), so the
+extensions below are additive rather than rewrites. None are implemented yet -
+they are recorded here as the natural next increments:
+
+- **Hybrid retrieval (semantic + keyword/BM25).** The §6 architecture target;
+  slots in behind the existing `Retriever` interface next to the semantic
+  baseline, with no change to the Q&A or citation layers.
+- **Summarization endpoint.** A patient-level clinical summary that reuses the
+  same grounding gate and per-sentence citation contract as `/ask`.
+- **Larger Synthea cohort.** Ingest many patients instead of one to stress
+  retrieval precision and patient-scoping at scale.
+- **Free-text clinical notes (e.g. MTSamples).** Run the PHI stage and chunking
+  over unstructured notes, not just structured FHIR resources.
+- **Next.js dashboard on Vercel.** A production-style frontend over the same
+  FastAPI service, if a hosted live demo is ever wanted (the Python API +
+  pgvector would still need separate hosting).
+
+---
+
 ## Guardrails & non-goals
 - Not clinically validated; not fit for real use.
 - No treatment recommendations or medical advice - reports only what the record states.
