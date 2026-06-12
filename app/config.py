@@ -27,6 +27,18 @@ class Settings(BaseSettings):
     chat_max_tokens: int = 2000
     chat_temperature: float = 0.0
 
+    # --- Judge model (eval harness, Phase 4) ---
+    # The LLM-as-judge runs through the same provider seam, but configured
+    # separately so it can be a *different* model than the one under test
+    # (judging a model with itself is a known eval weakness). Defaults to MiniMax;
+    # judge_api_key falls back to chat_api_key when blank.
+    judge_provider: Literal["anthropic", "openai"] = "anthropic"
+    judge_model: str = "MiniMax-M3"
+    judge_base_url: str = "https://api.minimax.io/anthropic"
+    judge_api_key: str = ""
+    judge_max_tokens: int = 1024
+    judge_temperature: float = 0.0
+
     # --- Embedding model ---
     embeddings_provider: Literal["local", "openai"] = "local"
     embeddings_model: str = "BAAI/bge-small-en-v1.5"

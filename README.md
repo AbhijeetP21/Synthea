@@ -15,7 +15,7 @@ CI-gated evaluation harness.
 
 ## Status
 
-Built in phases (see the build brief). **Phases 1–3 are implemented:**
+Built in phases (see the build brief). **Phases 1–4 are implemented:**
 
 - ✅ **Phase 1 (MVP):** ingest one Synthea patient → pgvector; patient-scoped
   semantic retrieval; grounded Q&A with **per-sentence inline citations**
@@ -25,7 +25,9 @@ Built in phases (see the build brief). **Phases 1–3 are implemented:**
   gate** plus the grounding gate (see below)
 - ✅ **Phase 3 (PHI):** Presidio-based detection & redaction of HIPAA Safe Harbor
   identifiers, before any text is embedded, stored, or sent to the model (see below)
-- 🔜 Phase 4: eval harness (groundedness, hallucination rate, retrieval precision/recall, abstention correctness) + CI gating
+- ✅ **Phase 4 (Eval harness + CI gate):** labeled gold set scored on groundedness,
+  hallucination rate, retrieval precision/recall, and abstention correctness;
+  deterministic metrics gate every PR in CI (see below)
 - 🔜 Phase 5: Streamlit dashboard with inline citation rendering
 
 > *Hybrid (semantic + keyword/BM25) retrieval — §6 of the brief — is built behind
@@ -205,6 +207,51 @@ codes survive so retrieval and citations are unaffected. Disable the stage with
 
 > Synthetic data only. This stage demonstrates data governance; it is **not** a
 > license to process real PHI.
+
+---
+
+## Eval harness + CI gate (Phase 4)
+
+A labeled **gold set** (`evals/gold_set.yaml`, ~14 items against the ingested
+patient) drives the four metrics the brief asks for. The harness runs in two
+layers:
+
+- **Deterministic layer (no API key)** — *retrieval precision/recall* against
+  labeled `source_id`s, and *abstention reachability*: off-topic questions must
+  retrieve nothing (so the relevance gate guarantees abstention), answerable ones
+  must retrieve evidence. This layer is the **hard CI merge gate** — it runs on a
+  Postgres+pgvector service container on every PR (`.github/workflows/ci.yml`),
+  so a retrieval or prompt change that regresses is caught before merge.
+- **LLM layer (needs a key)** — runs the real Q&A path for true *abstention
+  correctness* and a `must_include` content check, plus an **LLM-as-judge**
+  (`evals/judge.py`) scoring *groundedness* and *hallucination rate* sentence by
+  sentence against each sentence's cited evidence. Advisory by default; `--strict`
+  makes it gate too.
+
+```powershell
+mise run eval                              # full run if CHAT_API_KEY is set
+uv run python -m evals.run --no-llm        # deterministic gate only (what CI runs)
+```
+
+Latest local run (MiniMax-M3 generator + judge, 14 items):
+
+| Metric | Score |
+|---|---|
+| Retrieval recall | **1.00** |
+| Retrieval precision | 0.23 *(small relevant sets vs. top-8 — recall is the safety-relevant number)* |
+| Abstention reachability (deterministic) | **1.00** |
+| Abstention correctness (LLM path) | **1.00** *(abstains on blood type, cancer hx, procedures, vaccinations, redacted contact info, off-topic)* |
+| Groundedness | **1.00** |
+| Hallucination rate | **0.00** |
+
+> Honest caveats: the gold set is small (14 items), and the judge currently
+> shares MiniMax's model family with the generator (`JUDGE_*` is a separate,
+> swappable seam precisely so a different judge can be dropped in). The grounding
+> gate drops uncited sentences *before* the judge sees them, so a near-zero
+> hallucination rate is expected by construction — the judge is a second line of
+> defense, not the only one. Two distinct abstention mechanisms are measured
+> separately: the deterministic relevance gate (off-topic) and the grounded LLM
+> layer (clinically-adjacent but out-of-record).
 
 ---
 

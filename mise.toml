@@ -24,6 +24,10 @@ run = "uv run python -m scripts.ingest"
 description = "Run the test suite"
 run = "uv run pytest -q"
 
+[tasks.eval]
+description = "Run the eval harness (deterministic gate + LLM-judge if a key is set)"
+run = "uv run python -m evals.run --out evals/last_run.json"
+
 [tasks.synthea]
 description = "Generate a Synthea cohort via Docker"
 run = "pwsh -File tools/synthea/generate.ps1"

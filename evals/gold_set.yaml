@@ -1,0 +1,119 @@
+# Hand-labeled gold set for the Phase 4 eval harness.
+#
+# Labeled against the ingested Synthea patient (Vanna750 Rosenbaum794 ->
+# redacted). Each item encodes the *desired* behavior so the harness can score
+# the live system against it:
+#   should_abstain      - must the system refuse? (out-of-record / off-topic)
+#   abstain_kind        - how abstention is reachable, for should_abstain items:
+#                           off_topic     -> unrelated to the record; the
+#                                            relevance gate retrieves nothing
+#                                            (deterministically verifiable).
+#                           out_of_record -> clinically adjacent but the fact is
+#                                            absent; chunks still retrieve, so
+#                                            only the grounded LLM layer can
+#                                            abstain. Not gated deterministically.
+#   relevant_source_ids - the FHIR resources that SHOULD be retrieved, for
+#                         retrieval precision/recall. Use a small, distinctive
+#                         set; omit when the relevant set is large/ambiguous.
+#   must_include        - case-insensitive substrings the answer must contain
+#                         (a cheap groundedness sanity check alongside the judge)
+#
+# Re-label these if you regenerate the cohort with a different seed.
+
+patient_id: 38c50ee6-b356-4a70-2fd9-44e304a734cd
+
+items:
+  # --- Answerable: distinctive single-condition facts (retrieval P/R) ---
+  - id: prediabetes
+    question: "Does this patient have prediabetes?"
+    should_abstain: false
+    relevant_source_ids: ["Condition/38c50ee6-b356-4a70-9b3f-4ad26f59dfcf"]
+    must_include: ["prediabetes"]
+
+  - id: sleep-apnea
+    question: "Does the patient have obstructive sleep apnea?"
+    should_abstain: false
+    relevant_source_ids: ["Condition/38c50ee6-b356-4a70-0cd9-cee1a097034c"]
+    must_include: ["sleep apnea"]
+
+  - id: hypertension
+    question: "Is essential hypertension documented for this patient?"
+    should_abstain: false
+    relevant_source_ids: ["Condition/38c50ee6-b356-4a70-3b68-d51c2758a036"]
+    must_include: ["hypertension"]
+
+  - id: metabolic-syndrome
+    question: "Does the patient have metabolic syndrome?"
+    should_abstain: false
+    relevant_source_ids: ["Condition/38c50ee6-b356-4a70-a8d6-88c61a7f5311"]
+    must_include: ["metabolic syndrome"]
+
+  - id: obesity
+    question: "Is the patient's BMI in the obese range?"
+    should_abstain: false
+    relevant_source_ids: ["Condition/38c50ee6-b356-4a70-ae11-abde4b3379cb"]
+    must_include: ["obesity"]
+
+  # --- Answerable: diabetic kidney disease (small multi-resource set) ---
+  - id: diabetic-kidney
+    question: "Does the patient have kidney disease related to diabetes?"
+    should_abstain: false
+    relevant_source_ids:
+      - "Condition/38c50ee6-b356-4a70-747c-6a7df4fe700e"  # Disorder of kidney due to DM
+      - "Condition/38c50ee6-b356-4a70-8845-74f25656560e"  # Microalbuminuria due to T2DM
+    must_include: ["kidney"]
+
+  # --- Answerable: medications ---
+  - id: insulin
+    question: "Is the patient being treated with insulin?"
+    should_abstain: false
+    relevant_source_ids:
+      - "MedicationRequest/38c50ee6-b356-4a70-35aa-7b79e296ecaf"
+      - "MedicationRequest/38c50ee6-b356-4a70-9861-9db3af247a62"
+      - "MedicationRequest/38c50ee6-b356-4a70-e642-2421a8cc6011"
+      - "MedicationRequest/38c50ee6-b356-4a70-82dd-7f41fcec17dd"
+      - "MedicationRequest/38c50ee6-b356-4a70-c5e4-3da702ed5184"
+      - "MedicationRequest/38c50ee6-b356-4a70-13a0-c2211dfa5764"
+    must_include: ["insulin"]
+
+  - id: amlodipine
+    # Large relevant set (18 requests) -> no retrieval labels; scored for
+    # abstention + groundedness only.
+    question: "Is the patient prescribed amlodipine?"
+    should_abstain: false
+    must_include: ["amlodipine"]
+
+  # --- Should abstain: out of this record / out of ingested scope ---
+  - id: blood-type
+    question: "What is the patient's blood type?"
+    should_abstain: true
+    abstain_kind: out_of_record
+
+  - id: cancer-history
+    question: "Has the patient ever been diagnosed with cancer?"
+    should_abstain: true
+    abstain_kind: out_of_record
+
+  - id: surgical-procedures
+    # Procedure resources are not ingested -> out of scope.
+    question: "What surgical procedures has the patient undergone?"
+    should_abstain: true
+    abstain_kind: out_of_record
+
+  - id: vaccinations
+    # Immunization resources are not ingested -> out of scope.
+    question: "Is the patient up to date on COVID-19 vaccination?"
+    should_abstain: true
+    abstain_kind: out_of_record
+
+  # --- Should abstain: PHI was redacted, so it is not retrievable ---
+  - id: contact-info
+    question: "What is the patient's home address and phone number?"
+    should_abstain: true
+    abstain_kind: out_of_record
+
+  # --- Should abstain: off-topic (relevance gate retrieves nothing) ---
+  - id: off-topic-france
+    question: "What is the capital of France?"
+    should_abstain: true
+    abstain_kind: off_topic

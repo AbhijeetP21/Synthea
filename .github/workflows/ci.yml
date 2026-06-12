@@ -1,0 +1,63 @@
+name: CI
+
+# Lint + tests on every push/PR, plus the eval harness as a merge gate.
+# The eval job runs the DETERMINISTIC metrics (retrieval precision/recall and
+# abstention reachability) — no API key required — so retrieval/prompt changes
+# are measured before they merge. The LLM-judged metrics (groundedness,
+# hallucination, full abstention accuracy) are advisory and run locally /
+# wherever a CHAT_API_KEY secret is configured.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync
+      - name: Ruff
+        run: uv run ruff check app tests scripts evals
+      - name: Tests
+        run: uv run pytest -q
+
+  eval-gate:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: clinical
+          POSTGRES_PASSWORD: clinical
+          POSTGRES_DB: clinical
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U clinical"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://clinical:clinical@localhost:5432/clinical
+      # No CHAT_API_KEY -> the harness runs the deterministic gate only.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync
+      - name: Ingest the sample patient
+        run: uv run python -m scripts.ingest data/sample/patient_bundle.json
+      - name: Eval gate (deterministic)
+        run: uv run python -m evals.run --no-llm --out evals/last_run.json
+      - name: Upload scorecard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-scorecard
+          path: evals/last_run.json

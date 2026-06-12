@@ -86,3 +86,21 @@ def _build(settings: Settings) -> ChatClient:
 @lru_cache
 def get_chat_client() -> ChatClient:
     return _build(get_settings())
+
+
+@lru_cache
+def get_judge_client() -> ChatClient:
+    """Chat client for the eval LLM-as-judge, configured from the JUDGE_* env
+    vars so it can point at a different model/provider than the one under test."""
+    s = get_settings()
+    judge = s.model_copy(
+        update={
+            "chat_provider": s.judge_provider,
+            "chat_model": s.judge_model,
+            "chat_base_url": s.judge_base_url,
+            "chat_api_key": s.judge_api_key or s.chat_api_key,
+            "chat_max_tokens": s.judge_max_tokens,
+            "chat_temperature": s.judge_temperature,
+        }
+    )
+    return _build(judge)
