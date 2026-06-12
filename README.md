@@ -15,20 +15,20 @@ CI-gated evaluation harness.
 
 ## Status
 
-Built in phases (see the build brief). **All five phases are implemented:**
+Built in stages (see the build brief). **All five stages are implemented:**
 
-- **Phase 1 (MVP):** ingest one Synthea patient → pgvector; patient-scoped
+- **Stage 1 (MVP):** ingest one Synthea patient → pgvector; patient-scoped
   semantic retrieval; grounded Q&A with **per-sentence inline citations**
   (structured, validated output)
-- **Phase 2 (Abstention):** refuses correctly when evidence is insufficient -
+- **Stage 2 (Abstention):** refuses correctly when evidence is insufficient -
   including off-topic / out-of-record questions - via a retrieval **relevance
   gate** plus the grounding gate (see below)
-- **Phase 3 (PHI):** Presidio-based detection & redaction of HIPAA Safe Harbor
+- **Stage 3 (PHI):** Presidio-based detection & redaction of HIPAA Safe Harbor
   identifiers, before any text is embedded, stored, or sent to the model (see below)
-- **Phase 4 (Eval harness + CI gate):** labeled gold set scored on groundedness,
+- **Stage 4 (Eval harness + CI gate):** labeled gold set scored on groundedness,
   hallucination rate, retrieval precision/recall, and abstention correctness;
   deterministic metrics gate every PR in CI (see below)
-- **Phase 5 (Dashboard):** Streamlit UI over the API that renders every answer
+- **Stage 5 (Dashboard):** Streamlit UI over the API that renders every answer
   with **inline, clickable citations** to the FHIR sources (see below)
 
 > *Hybrid (semantic + keyword/BM25) retrieval - §6 of the brief - is built behind
@@ -159,7 +159,7 @@ Answers are **structured, not free text**, and validated with Pydantic
 
 ---
 
-## Abstention (Phase 2)
+## Abstention (Stage 2)
 
 The system refuses to answer when the record doesn't support an answer. Two
 independent gates make this robust:
@@ -171,7 +171,7 @@ independent gates make this robust:
    service abstains **without ever calling the model**. The threshold (default
    `0.40`) was calibrated on the ingested patient - relevant queries land at
    cosine distance ~0.24-0.34, off-topic ones at ~0.42+ - and is env-tunable so
-   the Phase 4 eval harness can optimize it.
+   the Stage 4 eval harness can optimize it.
 2. **Grounding gate** (above): even when evidence *is* retrieved, any answer the
    model can't tie back to it is dropped, falling through to abstention.
 
@@ -182,7 +182,7 @@ guessing - the strongest safety signal the brief asks for.
 
 ---
 
-## PHI detection & redaction (Phase 3)
+## PHI detection & redaction (Stage 3)
 
 Before any text is embedded, stored, or sent to the model, it passes through the
 PHI stage (`app/ingest/phi.py`), which uses **Microsoft Presidio** (spaCy NER +
@@ -216,7 +216,7 @@ codes survive so retrieval and citations are unaffected. Disable the stage with
 
 ---
 
-## Eval harness + CI gate (Phase 4)
+## Eval harness + CI gate (Stage 4)
 
 A labeled **gold set** (`evals/gold_set.yaml`, ~14 items against the ingested
 patient) drives the four metrics the brief asks for. The harness runs in two
@@ -261,7 +261,7 @@ Latest local run (MiniMax-M3 generator + judge, 14 items):
 
 ---
 
-## Dashboard (Phase 5)
+## Dashboard (Stage 5)
 
 A Streamlit UI (`streamlit_app.py`) talks to the FastAPI service over HTTP - so
 it shows exactly what any client would get - and renders the traceability that
