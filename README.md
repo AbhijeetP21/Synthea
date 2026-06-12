@@ -6,7 +6,7 @@ to the FHIR resource it came from**. Built to demonstrate the things clinical AI
 teams actually hire for: citation grounding, abstention, PHI governance, and a
 CI-gated evaluation harness.
 
-> ⚠️ **Scope & safety.** Synthetic and public data only — **never real PHI**.
+> **Scope & safety.** Synthetic and public data only - **never real PHI**.
 > This system is **not clinically validated**, is **not fit for real clinical
 > use**, and **does not provide medical advice or treatment recommendations**.
 > It is strictly a retrieval-and-grounding demonstrator.
@@ -17,21 +17,21 @@ CI-gated evaluation harness.
 
 Built in phases (see the build brief). **All five phases are implemented:**
 
-- ✅ **Phase 1 (MVP):** ingest one Synthea patient → pgvector; patient-scoped
+- **Phase 1 (MVP):** ingest one Synthea patient → pgvector; patient-scoped
   semantic retrieval; grounded Q&A with **per-sentence inline citations**
   (structured, validated output)
-- ✅ **Phase 2 (Abstention):** refuses correctly when evidence is insufficient —
-  including off-topic / out-of-record questions — via a retrieval **relevance
+- **Phase 2 (Abstention):** refuses correctly when evidence is insufficient -
+  including off-topic / out-of-record questions - via a retrieval **relevance
   gate** plus the grounding gate (see below)
-- ✅ **Phase 3 (PHI):** Presidio-based detection & redaction of HIPAA Safe Harbor
+- **Phase 3 (PHI):** Presidio-based detection & redaction of HIPAA Safe Harbor
   identifiers, before any text is embedded, stored, or sent to the model (see below)
-- ✅ **Phase 4 (Eval harness + CI gate):** labeled gold set scored on groundedness,
+- **Phase 4 (Eval harness + CI gate):** labeled gold set scored on groundedness,
   hallucination rate, retrieval precision/recall, and abstention correctness;
   deterministic metrics gate every PR in CI (see below)
-- ✅ **Phase 5 (Dashboard):** Streamlit UI over the API that renders every answer
+- **Phase 5 (Dashboard):** Streamlit UI over the API that renders every answer
   with **inline, clickable citations** to the FHIR sources (see below)
 
-> *Hybrid (semantic + keyword/BM25) retrieval — §6 of the brief — is built behind
+> *Hybrid (semantic + keyword/BM25) retrieval - §6 of the brief - is built behind
 > the `Retriever` seam as a later increment; semantic-only is the MVP baseline.*
 
 ---
@@ -63,7 +63,7 @@ Synthea FHIR bundle
 FastAPI /ask  →  per-sentence citations + resolved sources
 ```
 
-### The provider seam (`app/llm/`) — swap providers via config, not code
+### The provider seam (`app/llm/`) - swap providers via config, not code
 
 Every LLM and embedding call goes through one module, configured entirely by
 environment variables. **No provider is hard-coded anywhere else.**
@@ -72,12 +72,12 @@ environment variables. **No provider is hard-coded anywhere else.**
   - `anthropic` → Anthropic SDK → **MiniMax-M3** at `https://api.minimax.io/anthropic` (today's default)
   - `openai` → OpenAI SDK → **OpenAI / SynapticaAI / MiniMax OpenAI-mode**
 - **Embeddings** (`EMBEDDINGS_PROVIDER`):
-  - `local` → **fastembed** (`bge-small-en-v1.5`, 384-dim) — offline, no key, deterministic for CI (default)
+  - `local` → **fastembed** (`bge-small-en-v1.5`, 384-dim) - offline, no key, deterministic for CI (default)
   - `openai` → any OpenAI-compatible `/embeddings` endpoint (OpenAI, MiniMax, SynapticaAI)
 
 Chat and embeddings are *separate* seams because the Anthropic SDK has no
 embeddings API and embeddings are universally OpenAI-shaped. **Pointing the app
-at SynapticaAI later is a base-URL + key change in `.env` — no code change.**
+at SynapticaAI later is a base-URL + key change in `.env` - no code change.**
 
 ---
 
@@ -85,12 +85,12 @@ at SynapticaAI later is a base-URL + key change in `.env` — no code change.**
 
 ### Prerequisites
 - [mise](https://mise.jdx.dev/) (manages Python + `uv`)
-- Docker (Postgres + pgvector, and Synthea generation — no local Java/JDK needed)
+- Docker (Postgres + pgvector, and Synthea generation - no local Java/JDK needed)
 
 ### 1. Install the toolchain and dependencies
 ```powershell
 mise install        # Python 3.12 + uv, per mise.toml
-mise run install    # uv sync — also pulls the spaCy en_core_web_lg model (~400MB) for PHI
+mise run install    # uv sync - also pulls the spaCy en_core_web_lg model (~400MB) for PHI
 ```
 
 ### 2. Configure environment
@@ -150,7 +150,7 @@ Answers are **structured, not free text**, and validated with Pydantic
 }
 ```
 
-- `source_id` is `<ResourceType>/<resource_id>` — a citation points at the exact
+- `source_id` is `<ResourceType>/<resource_id>` - a citation points at the exact
   FHIR resource it came from.
 - **Grounding gate** (`app/qa/service.py`): citations that don't resolve to a
   retrieved source are dropped; a sentence with no surviving citation is dropped;
@@ -169,8 +169,8 @@ independent gates make this robust:
    discarded. An off-topic or out-of-record question (*"What is the capital of
    France?"*) finds nothing close enough, retrieves zero evidence, and the
    service abstains **without ever calling the model**. The threshold (default
-   `0.40`) was calibrated on the ingested patient — relevant queries land at
-   cosine distance ~0.24–0.34, off-topic ones at ~0.42+ — and is env-tunable so
+   `0.40`) was calibrated on the ingested patient - relevant queries land at
+   cosine distance ~0.24-0.34, off-topic ones at ~0.42+ - and is env-tunable so
    the Phase 4 eval harness can optimize it.
 2. **Grounding gate** (above): even when evidence *is* retrieved, any answer the
    model can't tie back to it is dropped, falling through to abstention.
@@ -178,7 +178,7 @@ independent gates make this robust:
 The model is also instructed to abstain on insufficient evidence and to answer
 only the supported parts of a multi-part question. Net effect: the system says
 *"No matching information was found in this patient's record"* instead of
-guessing — the strongest safety signal the brief asks for.
+guessing - the strongest safety signal the brief asks for.
 
 ---
 
@@ -191,14 +191,14 @@ design choices:
 
 - **Structured hints, not NER guesswork.** FHIR is structured, so at ingest time
   we already know the patient's name and address. Synthea's names carry numeric
-  suffixes (*"Vanna750 Rosenbaum794"*) that defeat NER outright — so
+  suffixes (*"Vanna750 Rosenbaum794"*) that defeat NER outright - so
   `collect_phi_hints()` pulls the known identifier strings from the Patient
   resource and seeds them as a Presidio deny-list. De-identification therefore
   does not depend on the model *inferring* that a token is a name. Custom
   recognizers cover the gaps in the base library (dashed SSNs, medical record
   numbers).
 - **Detect-all, redact-curated.** Every identifier category found is *reported*
-  (the governance signal — `mise run ingest` prints the tally); direct
+  (the governance signal - `mise run ingest` prints the tally); direct
   identifiers (names, geography, contacts, SSN/MRN, account/license numbers) are
   *redacted* to `<PERSON>`, `<LOCATION>`, etc. **Dates are flagged but kept by
   default** (`PHI_REDACT_DATES=false`): onset and authoring dates are clinical
@@ -207,7 +207,7 @@ design choices:
 
 After redaction the stored Patient record reads
 `Patient <PERSON>. Gender: female. Date of birth: 1966-10-28. Address: <LOCATION>, <LOCATION>.`
-— the name and city are gone everywhere, while gender, dates, and all clinical
+- the name and city are gone everywhere, while gender, dates, and all clinical
 codes survive so retrieval and citations are unaffected. Disable the stage with
 `PHI_REDACTION=false`.
 
@@ -222,13 +222,13 @@ A labeled **gold set** (`evals/gold_set.yaml`, ~14 items against the ingested
 patient) drives the four metrics the brief asks for. The harness runs in two
 layers:
 
-- **Deterministic layer (no API key)** — *retrieval precision/recall* against
+- **Deterministic layer (no API key)** - *retrieval precision/recall* against
   labeled `source_id`s, and *abstention reachability*: off-topic questions must
   retrieve nothing (so the relevance gate guarantees abstention), answerable ones
-  must retrieve evidence. This layer is the **hard CI merge gate** — it runs on a
+  must retrieve evidence. This layer is the **hard CI merge gate** - it runs on a
   Postgres+pgvector service container on every PR (`.github/workflows/ci.yml`),
   so a retrieval or prompt change that regresses is caught before merge.
-- **LLM layer (needs a key)** — runs the real Q&A path for true *abstention
+- **LLM layer (needs a key)** - runs the real Q&A path for true *abstention
   correctness* and a `must_include` content check, plus an **LLM-as-judge**
   (`evals/judge.py`) scoring *groundedness* and *hallucination rate* sentence by
   sentence against each sentence's cited evidence. Advisory by default; `--strict`
@@ -244,7 +244,7 @@ Latest local run (MiniMax-M3 generator + judge, 14 items):
 | Metric | Score |
 |---|---|
 | Retrieval recall | **1.00** |
-| Retrieval precision | 0.23 *(small relevant sets vs. top-8 — recall is the safety-relevant number)* |
+| Retrieval precision | 0.23 *(small relevant sets vs. top-8 - recall is the safety-relevant number)* |
 | Abstention reachability (deterministic) | **1.00** |
 | Abstention correctness (LLM path) | **1.00** *(abstains on blood type, cancer hx, procedures, vaccinations, redacted contact info, off-topic)* |
 | Groundedness | **1.00** |
@@ -254,7 +254,7 @@ Latest local run (MiniMax-M3 generator + judge, 14 items):
 > shares MiniMax's model family with the generator (`JUDGE_*` is a separate,
 > swappable seam precisely so a different judge can be dropped in). The grounding
 > gate drops uncited sentences *before* the judge sees them, so a near-zero
-> hallucination rate is expected by construction — the judge is a second line of
+> hallucination rate is expected by construction - the judge is a second line of
 > defense, not the only one. Two distinct abstention mechanisms are measured
 > separately: the deterministic relevance gate (off-topic) and the grounded LLM
 > layer (clinically-adjacent but out-of-record).
@@ -263,14 +263,14 @@ Latest local run (MiniMax-M3 generator + judge, 14 items):
 
 ## Dashboard (Phase 5)
 
-A Streamlit UI (`streamlit_app.py`) talks to the FastAPI service over HTTP — so
-it shows exactly what any client would get — and renders the traceability that
+A Streamlit UI (`streamlit_app.py`) talks to the FastAPI service over HTTP - so
+it shows exactly what any client would get - and renders the traceability that
 is the whole point of the system:
 
 - Each answer sentence carries **superscript `[n]` citations that link down to
   numbered source cards** (the resolved FHIR resource: its text, clinical codes,
   and date). Grounding is *visible*, not just claimed.
-- **Abstention is shown as a deliberate notice**, not an error — the safety
+- **Abstention is shown as a deliberate notice**, not an error - the safety
   behavior reads as a feature.
 - Redacted tokens (`<PERSON>`, `<LOCATION>`) appear in the source text, so the
   PHI stage is visible too.
@@ -299,6 +299,6 @@ rendering helpers.
 
 ## Guardrails & non-goals
 - Not clinically validated; not fit for real use.
-- No treatment recommendations or medical advice — reports only what the record states.
+- No treatment recommendations or medical advice - reports only what the record states.
 - Strictly retrieval + grounding (+ later summarization) over **synthetic** data.
 - **Never touches real PHI.**
